@@ -689,10 +689,18 @@
         checkPhraseStatusInitClass: 'js-dgwt-wcas-stats-critical-check-init',
         rowLoadingClass: 'dgwt-wcas-analytics-row-loading',
         languageSwitcherClass: 'js-dgwt-wcas-analytics-lang',
+        periodSwitcherClass: 'js-dgwt-wcas-analytics-period',
+        customRangeClass: 'js-dgwt-wcas-analytics-custom-range',
+        dateFromClass: 'js-dgwt-wcas-analytics-date-from',
+        dateToClass: 'js-dgwt-wcas-analytics-date-to',
+        applyDateClass: 'js-dgwt-wcas-analytics-apply-date',
         excludePhraseClass: 'js-dgwt-wcas-analytics-exclude-phrase',
         checkIndexerAction: 'js-dgwt-wcas-analytics-check-indexer',
         resetAnalyticsAction: 'js-dgwt-wcas-analytics-reset',
         analyticsExportCSVAction: 'js-dgwt-wcas-analytics-export-csv',
+        currentPeriod: '30',
+        currentDateFrom: '',
+        currentDateTo: '',
         init: function () {
             var _this = this;
 
@@ -717,11 +725,7 @@
 
             if ($languageSelectorEl.length > 0) {
                 $languageSelectorEl.on('change', function () {
-                    var $canvas = $('.' + _this.placeholderClass);
-                    if ($canvas.length > 0) {
-                        $canvas.html('');
-                        _this.loadInterface();
-                    }
+                    _this.reloadInterface();
                 });
             }
 
@@ -739,6 +743,47 @@
                 $placeholder.append(html);
             }
         },
+        getDateRangeParams: function () {
+            var _this = this;
+
+            return {
+                period: _this.currentPeriod || '30',
+                date_from: _this.currentDateFrom || '',
+                date_to: _this.currentDateTo || ''
+            };
+        },
+        syncDateRangeFromDom: function () {
+            var _this = this,
+                $filter = $('.dgwt-wcas-analytics-date-filter'),
+                $period = $('.' + _this.periodSwitcherClass);
+
+            if ($period.length > 0) {
+                _this.currentPeriod = $period.val();
+            } else if ($filter.length > 0) {
+                _this.currentPeriod = $filter.data('period') || '30';
+            }
+
+            if (_this.currentPeriod === 'custom') {
+                var $from = $('.' + _this.dateFromClass),
+                    $to = $('.' + _this.dateToClass);
+
+                _this.currentDateFrom = $from.length ? $from.val() : ($filter.data('date-from') || '');
+                _this.currentDateTo = $to.length ? $to.val() : ($filter.data('date-to') || '');
+            } else {
+                _this.currentDateFrom = '';
+                _this.currentDateTo = '';
+            }
+        },
+        reloadInterface: function () {
+            var _this = this,
+                $canvas = $('.' + _this.placeholderClass);
+
+            if ($canvas.length > 0) {
+                $canvas.removeClass(_this.placeholderClassLoaded);
+                $canvas.html('');
+                _this.loadInterface();
+            }
+        },
         loadInterface: function () {
             var _this = this,
                 $lang = $('.' + _this.languageSwitcherClass + ' option:selected');
@@ -749,6 +794,8 @@
                 'action': 'dgwt_wcas_load_stats_interface',
                 '_wpnonce': dgwt_wcas.analytics.nonce.analytics_load_interface
             };
+
+            $.extend(data, _this.getDateRangeParams());
 
             if ($lang.length > 0) {
                 data.lang = $lang.val();
@@ -762,6 +809,8 @@
                     if (typeof response == 'object' && response.success && $el.length > 0) {
                         $el.addClass(_this.placeholderClassLoaded);
                         $el.html(response.data.html);
+                        _this.syncDateRangeFromDom();
+                        _this.dateFilterListener();
                         _this.loadCheckCriticalSearchesListeners();
                         _this.loadMoreListeners();
                         _this.resetStatsListener();
@@ -769,6 +818,42 @@
                     }
                 }
             );
+        },
+        dateFilterListener: function () {
+            var _this = this,
+                $period = $('.' + _this.periodSwitcherClass),
+                $customRange = $('.' + _this.customRangeClass),
+                $apply = $('.' + _this.applyDateClass);
+
+            $period.off('change.dgwtAnalyticsDate').on('change.dgwtAnalyticsDate', function () {
+                var period = $(this).val();
+
+                if (period === 'custom') {
+                    $customRange.show();
+                    return;
+                }
+
+                $customRange.hide();
+                _this.currentPeriod = period;
+                _this.currentDateFrom = '';
+                _this.currentDateTo = '';
+                _this.reloadInterface();
+            });
+
+            $apply.off('click.dgwtAnalyticsDate').on('click.dgwtAnalyticsDate', function (e) {
+                e.preventDefault();
+                var dateFrom = $('.' + _this.dateFromClass).val(),
+                    dateTo = $('.' + _this.dateToClass).val();
+
+                if (!dateFrom || !dateTo) {
+                    return;
+                }
+
+                _this.currentPeriod = 'custom';
+                _this.currentDateFrom = dateFrom;
+                _this.currentDateTo = dateTo;
+                _this.reloadInterface();
+            });
         },
         loadCheckCriticalSearchesListeners: function () {
             var _this = this,
@@ -837,7 +922,8 @@
         },
         exportStatsListener: function () {
             var _this = this,
-                $lang = $('.' + _this.languageSwitcherClass + ' option:selected');
+                $lang = $('.' + _this.languageSwitcherClass + ' option:selected'),
+                dateRange = _this.getDateRangeParams();
 
             $('.' + _this.analyticsExportCSVAction).on('click', function (e) {
                 var $el = $(this);
@@ -846,6 +932,13 @@
                 url.searchParams.append('action', 'dgwt_wcas_export_stats_csv');
                 url.searchParams.append('context', $(this).data('context'));
                 url.searchParams.append('_wpnonce', dgwt_wcas.analytics.nonce.export_stats_csv);
+                url.searchParams.append('period', dateRange.period);
+                if (dateRange.date_from) {
+                    url.searchParams.append('date_from', dateRange.date_from);
+                }
+                if (dateRange.date_to) {
+                    url.searchParams.append('date_to', dateRange.date_to);
+                }
                 if ($lang.length > 0) {
                     url.searchParams.append('lang', $lang.val());
                 }
@@ -940,6 +1033,8 @@
                 '_wpnonce': dgwt_wcas.analytics.nonce.load_more_critical_searches
             };
 
+            $.extend(data, _this.getDateRangeParams());
+
             if ($lang.length > 0) {
                 data.lang = $lang.val();
             }
@@ -987,6 +1082,8 @@
                     '_wpnonce': dgwt_wcas.analytics.nonce.load_more_search_page
                 };
             }
+
+            $.extend(data, _this.getDateRangeParams());
 
             if ($lang.length > 0) {
                 data.lang = $lang.val();

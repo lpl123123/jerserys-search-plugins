@@ -2221,6 +2221,37 @@ h3.dgwt-wcas-troubleshooting-issue-title {
 	padding-left: 10px;
 }
 
+.dgwt-wcas-analytics-date-filter {
+	padding-left: 10px;
+	margin-bottom: 25px;
+}
+
+.dgwt-wcas-analytics-date-filter__controls {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+}
+
+.dgwt-wcas-analytics-date-filter__controls select {
+	min-width: 160px;
+}
+
+.dgwt-wcas-analytics-date-filter__custom {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
+.dgwt-wcas-analytics-date-filter__custom label {
+	font-weight: 600;
+}
+
+.dgwt-wcas-analytics-date-filter__custom input[type="date"] {
+	max-width: 150px;
+}
+
 .dgwt-wcas-analytics-tiles {
 	display: flex;
 	justify-content: flex-start;
@@ -2702,6 +2733,21 @@ input.dgwt-wcas-selectize.loading {
 	.dgwt-wcas-analytics-tiles {
 		margin-bottom: 10px;
 		align-items: flex-start;
+	}
+
+	.dgwt-wcas-analytics-date-filter {
+		padding-left: 0;
+	}
+
+	.dgwt-wcas-analytics-date-filter__controls,
+	.dgwt-wcas-analytics-date-filter__custom {
+		width: 100%;
+	}
+
+	.dgwt-wcas-analytics-date-filter__controls select,
+	.dgwt-wcas-analytics-date-filter__custom input[type="date"] {
+		width: 100%;
+		max-width: 100%;
 	}
 
 	.dgwt-wcas-analytics-tiles,

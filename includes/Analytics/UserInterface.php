@@ -206,14 +206,15 @@ class UserInterface {
 
 		check_ajax_referer( self::LOAD_INTERFACE_NONCE );
 
-		$lang = ! empty( $_REQUEST['lang'] ) && Multilingual::isLangCode( sanitize_key( $_REQUEST['lang'] ) ) ? sanitize_key( $_REQUEST['lang'] ) : '';
+		$lang      = ! empty( $_REQUEST['lang'] ) && Multilingual::isLangCode( sanitize_key( $_REQUEST['lang'] ) ) ? sanitize_key( $_REQUEST['lang'] ) : '';
+		$dateRange = $this->getDateRangeFromRequest();
 
 		$data = [
 			'html' => '',
 		];
 
 		ob_start();
-		$vars = $this->getVars( $lang );
+		$vars = $this->getVars( $lang, $dateRange );
 		require DGWT_WCAS_DIR . 'partials/admin/stats/stats.php';
 		$data['html'] = ob_get_clean();
 
@@ -232,7 +233,8 @@ class UserInterface {
 
 		check_ajax_referer( self::LOAD_MORE_CRITICAL_SEARCHES_NONCE );
 
-		$lang = ! empty( $_REQUEST['lang'] ) && Multilingual::isLangCode( sanitize_key( $_REQUEST['lang'] ) ) ? sanitize_key( $_REQUEST['lang'] ) : '';
+		$lang      = ! empty( $_REQUEST['lang'] ) && Multilingual::isLangCode( sanitize_key( $_REQUEST['lang'] ) ) ? sanitize_key( $_REQUEST['lang'] ) : '';
+		$dateRange = $this->getDateRangeFromRequest();
 
 		$offset = ! empty( $_REQUEST['loaded'] ) ? absint( $_REQUEST['loaded'] ) : 0;
 		$html   = '';
@@ -240,6 +242,7 @@ class UserInterface {
 		if ( ! empty( $lang ) ) {
 			$data->setLang( $lang );
 		}
+		$this->applyDateRange( $data, $dateRange );
 
 		$total = $data->getTotalCriticalSearches();
 
@@ -283,13 +286,15 @@ class UserInterface {
 
 		check_ajax_referer( self::LOAD_MORE_AUTOCOMPLETE_NONCE );
 
-		$lang = ! empty( $_REQUEST['lang'] ) && Multilingual::isLangCode( sanitize_key( $_REQUEST['lang'] ) ) ? sanitize_key( $_REQUEST['lang'] ) : '';
+		$lang      = ! empty( $_REQUEST['lang'] ) && Multilingual::isLangCode( sanitize_key( $_REQUEST['lang'] ) ) ? sanitize_key( $_REQUEST['lang'] ) : '';
+		$dateRange = $this->getDateRangeFromRequest();
 
 		// Autocomplete
 		$data = new Data();
 		if ( ! empty( $lang ) ) {
 			$data->setLang( $lang );
 		}
+		$this->applyDateRange( $data, $dateRange );
 		$data->setContext( 'autocomplete' );
 		$phrases = $data->getPhrasesWithResults( 100 );
 
@@ -320,13 +325,15 @@ class UserInterface {
 
 		check_ajax_referer( self::LOAD_MORE_SEARCH_PAGE_NONCE );
 
-		$lang = ! empty( $_REQUEST['lang'] ) && Multilingual::isLangCode( sanitize_key( $_REQUEST['lang'] ) ) ? sanitize_key( $_REQUEST['lang'] ) : '';
+		$lang      = ! empty( $_REQUEST['lang'] ) && Multilingual::isLangCode( sanitize_key( $_REQUEST['lang'] ) ) ? sanitize_key( $_REQUEST['lang'] ) : '';
+		$dateRange = $this->getDateRangeFromRequest();
 
 		// Search page
 		$data = new Data();
 		if ( ! empty( $lang ) ) {
 			$data->setLang( $lang );
 		}
+		$this->applyDateRange( $data, $dateRange );
 		$data->setContext( 'search-results-page' );
 		$phrases = $data->getPhrasesWithResults( 100 );
 
@@ -526,9 +533,11 @@ class UserInterface {
 			require_once WC_ABSPATH . 'includes/export/abstract-wc-csv-exporter.php';
 		}
 
-		$exporter = new CSVExporter();
-		$context  = isset( $_GET['context'] ) ? sanitize_key( $_GET['context'] ) : '';
+		$exporter  = new CSVExporter();
+		$context   = isset( $_GET['context'] ) ? sanitize_key( $_GET['context'] ) : '';
+		$dateRange = $this->getDateRangeFromRequest();
 		$exporter->set_context( $context );
+		$exporter->set_date_range( $dateRange['from'], $dateRange['to'] );
 		$lang = ! empty( $_REQUEST['lang'] ) && Multilingual::isLangCode( sanitize_key( $_REQUEST['lang'] ) ) ? sanitize_key( $_REQUEST['lang'] ) : '';
 		if ( ! empty( $lang ) ) {
 			$exporter->set_lang( $lang );
@@ -540,20 +549,35 @@ class UserInterface {
 	 * Prepare vars for the view
 	 *
 	 * @param string $lang
+	 * @param array  $dateRange
 	 *
 	 * @return array
 	 */
-	private function getVars( $lang = '' ) {
+	private function getVars( $lang = '', $dateRange = [] ) {
 		$data = new Data();
 
 		if ( Multilingual::isMultilingual() ) {
 			$data->setLang( $lang );
 		}
 
-		$mainUrl = 'https://fibosearch.com/lack-of-queries-insight-really-hurts-your-sales/';
+		if ( empty( $dateRange ) ) {
+			$dateRange = $this->resolveDateRange();
+		}
+
+		$this->applyDateRange( $data, $dateRange );
+
+		$mainUrl        = 'https://fibosearch.com/lack-of-queries-insight-really-hurts-your-sales/';
+		$expirationDays = $this->getExpirationInDays();
 
 		$vars = [
-			'days'                             => $this->getExpirationInDays(),
+			'days'                             => $dateRange['days'],
+			'expiration-days'                  => $expirationDays,
+			'period'                           => $dateRange['period'],
+			'date-from'                        => substr( $dateRange['from'], 0, 10 ),
+			'date-to'                          => substr( $dateRange['to'], 0, 10 ),
+			'period-label'                     => $this->getPeriodLabel( $dateRange ),
+			'min-date'                         => date( 'Y-m-d', strtotime( 'today - ' . $expirationDays . ' days' ) ),
+			'max-date'                         => date( 'Y-m-d' ),
 			'autocomplete'                     => [],
 			'search-page'                      => [],
 			'critical-searches'                => [],
@@ -566,6 +590,7 @@ class UserInterface {
 				'support'  => 'https://fibosearch.com/contact/',
 			],
 			'table-info'                       => Helpers::getTableInfo( Database::getTableName() ),
+			'total-records'                    => Database::getRecordsCount(),
 		];
 
 		// Autocomplete
@@ -617,6 +642,181 @@ class UserInterface {
 		}
 
 		return $vars;
+	}
+
+	/**
+	 * Read and normalize the date range from the current request
+	 *
+	 * @return array
+	 */
+	private function getDateRangeFromRequest() {
+		$period   = ! empty( $_REQUEST['period'] ) ? sanitize_key( wp_unslash( $_REQUEST['period'] ) ) : '';
+		$dateFrom = ! empty( $_REQUEST['date_from'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['date_from'] ) ) : '';
+		$dateTo   = ! empty( $_REQUEST['date_to'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['date_to'] ) ) : '';
+
+		return $this->resolveDateRange( $period, $dateFrom, $dateTo );
+	}
+
+	/**
+	 * Resolve a period preset or custom dates into a concrete date range
+	 *
+	 * @param string $period
+	 * @param string $dateFrom Y-m-d
+	 * @param string $dateTo   Y-m-d
+	 *
+	 * @return array
+	 */
+	public function resolveDateRange( $period = '', $dateFrom = '', $dateTo = '' ) {
+		$expirationDays = $this->getExpirationInDays();
+		$allowedPeriods = [ 'today', '7', '30', 'custom' ];
+		$defaultPeriod  = '30';
+
+		if ( $expirationDays < 30 ) {
+			$defaultPeriod = $expirationDays >= 7 ? '7' : 'today';
+		}
+
+		if ( empty( $period ) || ! in_array( $period, $allowedPeriods, true ) ) {
+			$period = $defaultPeriod;
+		}
+
+		// Fallback when a longer preset is requested but retention is shorter.
+		if ( $period === '30' && $expirationDays < 30 ) {
+			$period = $expirationDays >= 7 ? '7' : 'today';
+		}
+		if ( $period === '7' && $expirationDays < 7 ) {
+			$period = 'today';
+		}
+
+		$earliest = strtotime( 'today - ' . $expirationDays . ' days' );
+		$todayEnd = date( 'Y-m-d H:i:s' );
+
+		switch ( $period ) {
+			case 'today':
+				$from = date( 'Y-m-d 00:00:00' );
+				$to   = $todayEnd;
+				$days = 1;
+				break;
+			case '7':
+				$days = min( 7, $expirationDays );
+				$from = date( 'Y-m-d H:i:s', strtotime( 'today - ' . $days . ' days' ) );
+				$to   = $todayEnd;
+				break;
+			case 'custom':
+				$fromDate = $this->sanitizeDateOnly( $dateFrom );
+				$toDate   = $this->sanitizeDateOnly( $dateTo );
+
+				if ( empty( $fromDate ) || empty( $toDate ) ) {
+					return $this->resolveDateRange( $defaultPeriod );
+				}
+
+				$fromTs = strtotime( $fromDate . ' 00:00:00' );
+				$toTs   = strtotime( $toDate . ' 23:59:59' );
+
+				if ( $fromTs === false || $toTs === false ) {
+					return $this->resolveDateRange( $defaultPeriod );
+				}
+
+				if ( $fromTs < $earliest ) {
+					$fromTs = $earliest;
+				}
+
+				$todayTs = strtotime( date( 'Y-m-d 23:59:59' ) );
+				if ( $toTs > $todayTs ) {
+					$toTs = $todayTs;
+				}
+
+				if ( $fromTs > $toTs ) {
+					$tmp    = $fromTs;
+					$fromTs = strtotime( date( 'Y-m-d 00:00:00', $toTs ) );
+					$toTs   = strtotime( date( 'Y-m-d 23:59:59', $tmp ) );
+				}
+
+				$from = date( 'Y-m-d H:i:s', $fromTs );
+				$to   = date( 'Y-m-d H:i:s', $toTs );
+				$days = max( 1, (int) floor( ( $toTs - $fromTs ) / DAY_IN_SECONDS ) + 1 );
+				break;
+			case '30':
+			default:
+				$days   = min( 30, $expirationDays );
+				$from   = date( 'Y-m-d H:i:s', strtotime( 'today - ' . $days . ' days' ) );
+				$to     = $todayEnd;
+				$period = '30';
+				break;
+		}
+
+		return [
+			'period' => $period,
+			'from'   => $from,
+			'to'     => $to,
+			'days'   => $days,
+		];
+	}
+
+	/**
+	 * Apply a resolved date range to a Data instance
+	 *
+	 * @param Data  $data
+	 * @param array $dateRange
+	 *
+	 * @return void
+	 */
+	private function applyDateRange( Data $data, $dateRange ) {
+		if ( empty( $dateRange['from'] ) || empty( $dateRange['to'] ) ) {
+			return;
+		}
+
+		$data->setDateRange( $dateRange['from'], $dateRange['to'] );
+	}
+
+	/**
+	 * Human readable label for the selected period
+	 *
+	 * @param array $dateRange
+	 *
+	 * @return string
+	 */
+	private function getPeriodLabel( $dateRange ) {
+		switch ( $dateRange['period'] ) {
+			case 'today':
+				return __( 'today', 'ajax-search-for-woocommerce' );
+			case '7':
+				return sprintf( __( 'last %d days', 'ajax-search-for-woocommerce' ), 7 );
+			case 'custom':
+				$from = date_i18n( get_option( 'date_format' ), strtotime( $dateRange['from'] ) );
+				$to   = date_i18n( get_option( 'date_format' ), strtotime( $dateRange['to'] ) );
+
+				return sprintf(
+					/* translators: 1: start date, 2: end date */
+					__( '%1$s – %2$s', 'ajax-search-for-woocommerce' ),
+					$from,
+					$to
+				);
+			case '30':
+			default:
+				return sprintf( __( 'last %d days', 'ajax-search-for-woocommerce' ), (int) $dateRange['days'] );
+		}
+	}
+
+	/**
+	 * Validate Y-m-d date string
+	 *
+	 * @param string $date
+	 *
+	 * @return string
+	 */
+	private function sanitizeDateOnly( $date ) {
+		$date = trim( (string) $date );
+
+		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ) {
+			return '';
+		}
+
+		$dt = \DateTime::createFromFormat( 'Y-m-d', $date );
+		if ( ! $dt || $dt->format( 'Y-m-d' ) !== $date ) {
+			return '';
+		}
+
+		return $date;
 	}
 
 	/**

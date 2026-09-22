@@ -11,8 +11,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class CSVExporter extends WC_CSV_Exporter {
 
-	private $context = '';
-	private $lang    = '';
+	private $context  = '';
+	private $lang     = '';
+	private $dateFrom = '';
+	private $dateTo   = '';
 
 	public function set_context( $context = '' ) {
 		$this->context = $context;
@@ -22,10 +24,24 @@ class CSVExporter extends WC_CSV_Exporter {
 		$this->lang = $lang;
 	}
 
+	/**
+	 * @param string $from Y-m-d H:i:s
+	 * @param string $to   Y-m-d H:i:s
+	 *
+	 * @return void
+	 */
+	public function set_date_range( $from = '', $to = '' ) {
+		$this->dateFrom = $from;
+		$this->dateTo   = $to;
+	}
+
 	public function prepare_data_to_export() {
 		$data = new Data();
 		if ( ! empty( $this->lang ) ) {
 			$data->setLang( $this->lang );
+		}
+		if ( ! empty( $this->dateFrom ) && ! empty( $this->dateTo ) ) {
+			$data->setDateRange( $this->dateFrom, $this->dateTo );
 		}
 
 		$dateSuffix = date( 'Ymd-His', time() );
