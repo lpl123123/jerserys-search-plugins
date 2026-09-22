@@ -3,6 +3,8 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+require DGWT_WCAS_DIR . 'partials/admin/stats/date-filter.php';
 ?>
 <div class="dgwt-wcas-analytics-module-critical">
 	<h3><?php _e( 'Critical searches without result', 'ajax-search-for-woocommerce' ); ?></h3>
@@ -13,8 +15,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 			//phpcs:ignore WordPress.WP.I18n.MissingSingularPlaceholder,WordPress.WP.I18n.MismatchedPlaceholders
 			printf( _n( 'The FiboSearch analyzer found <b>1 critical search phrase</b>.', 'The FiboSearch analyzer found <b>%d critical search phrases</b>.', $vars['critical-searches-total'], 'ajax-search-for-woocommerce' ), $vars['critical-searches-total'] );
 			echo ' ';
-			//phpcs:ignore WordPress.WP.I18n.MissingSingularPlaceholder,WordPress.WP.I18n.MismatchedPlaceholders
-			printf( _n( 'These phrases have been typed by users over the last 1 day.', 'These phrases have been typed by users over the last %d days.', $vars['days'], 'ajax-search-for-woocommerce' ), $vars['days'] );
+			if ( $vars['period'] === 'custom' ) {
+				printf(
+					/* translators: %s: selected date range label */
+					__( 'These phrases have been typed by users during %s.', 'ajax-search-for-woocommerce' ),
+					esc_html( $vars['period-label'] )
+				);
+			} else {
+				//phpcs:ignore WordPress.WP.I18n.MissingSingularPlaceholder,WordPress.WP.I18n.MismatchedPlaceholders
+				printf( _n( 'These phrases have been typed by users over the last 1 day.', 'These phrases have been typed by users over the last %d days.', $vars['days'], 'ajax-search-for-woocommerce' ), $vars['days'] );
+			}
 			echo ' ';
 			_e( "These phrases don`t return any search results. It's time to fix it.", 'ajax-search-for-woocommerce' );
 			?>
@@ -86,7 +96,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 
 	<?php else : ?>
-		<p class="dgwt-wcas-analytics-subtitle"><?php printf( __( "Fantastic! The FiboSearch analyzer hasn't found any critical search phrases for the last %d days.", 'ajax-search-for-woocommerce' ), $vars['days'] ); ?></p>
+		<p class="dgwt-wcas-analytics-subtitle">
+			<?php
+			if ( $vars['period'] === 'custom' ) {
+				printf(
+					/* translators: %s: selected date range label */
+					__( "Fantastic! The FiboSearch analyzer hasn't found any critical search phrases for %s.", 'ajax-search-for-woocommerce' ),
+					esc_html( $vars['period-label'] )
+				);
+			} else {
+				printf( __( "Fantastic! The FiboSearch analyzer hasn't found any critical search phrases for the last %d days.", 'ajax-search-for-woocommerce' ), $vars['days'] );
+			}
+			?>
+		</p>
 	<?php endif; ?>
 
 
@@ -94,7 +116,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 <?php if ( ! defined( 'DGWT_WCAS_ANALYTICS_ONLY_CRITICAL' ) || ! DGWT_WCAS_ANALYTICS_ONLY_CRITICAL ) : ?>
 	<div class="dgwt-wcas-analytics-module-tiles">
-		<h3><?php printf( __( 'Searches stats (last %d days)', 'ajax-search-for-woocommerce' ), $vars['days'] ); ?></h3>
+		<h3>
+			<?php
+			if ( $vars['period'] === 'custom' ) {
+				printf(
+					/* translators: %s: selected date range label */
+					__( 'Searches stats (%s)', 'ajax-search-for-woocommerce' ),
+					esc_html( $vars['period-label'] )
+				);
+			} else {
+				printf( __( 'Searches stats (last %d days)', 'ajax-search-for-woocommerce' ), $vars['days'] );
+			}
+			?>
+		</h3>
 
 		<div class="dgwt-wcas-analytics-tiles">
 			<div class="dgwt-wcas-analytics-tile">
@@ -269,13 +303,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<p class="dgwt-wcas-analytics-subtitle">
 		<?php
 		$reset = sprintf( '<a class="js-dgwt-wcas-analytics-reset" href="#">%s</a>', __( 'reset your stats', 'ajax-search-for-woocommerce' ) ) . '<span class="dgwt-wcas-ajax-loader"></span>';
-		$size  = $vars['autocomplete']['total-results'] > 0 ? $vars['table-info']['data'] + $vars['table-info']['index'] : 0;
+		$size  = $vars['total-records'] > 0 ? $vars['table-info']['data'] + $vars['table-info']['index'] : 0;
 		?>
 		<?php
 		printf(
 			_x( 'The stats older than %1$d days are removed from your database on a daily basis. Now you have %2$d records in the DB that weigh %3$.2fMB. You can %4$s now and start collecting them all over again.', 'The last placeholder is a button with text "reset your stats"', 'ajax-search-for-woocommerce' ),
-			$vars['days'],
-			esc_html( $vars['autocomplete']['total-results'] ),
+			$vars['expiration-days'],
+			esc_html( $vars['total-records'] ),
 			$size,
 			$reset
 		);

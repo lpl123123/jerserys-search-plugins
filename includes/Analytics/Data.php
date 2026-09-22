@@ -106,8 +106,35 @@ class Data {
 	 * @return void
 	 */
 	public function setDefaultDateRange() {
-		$this->dateFrom = date( $this->format, strtotime( 'today - 30 days' ) );
+		$days = Maintenance::ANALYTICS_EXPIRATION_IN_DAYS;
+
+		if (
+			defined( 'DGWT_WCAS_ANALYTICS_EXPIRATION_IN_DAYS' ) &&
+			intval( DGWT_WCAS_ANALYTICS_EXPIRATION_IN_DAYS ) > 0
+		) {
+			$days = intval( DGWT_WCAS_ANALYTICS_EXPIRATION_IN_DAYS );
+		}
+
+		$this->dateFrom = date( $this->format, strtotime( 'today - ' . $days . ' days' ) );
 		$this->dateTo   = date( $this->format );
+	}
+
+	/**
+	 * Get date from
+	 *
+	 * @return string
+	 */
+	public function getDateFrom() {
+		return $this->dateFrom;
+	}
+
+	/**
+	 * Get date to
+	 *
+	 * @return string
+	 */
+	public function getDateTo() {
+		return $this->dateTo;
 	}
 
 	/**
