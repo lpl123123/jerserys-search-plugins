@@ -690,6 +690,7 @@
         rowLoadingClass: 'dgwt-wcas-analytics-row-loading',
         languageSwitcherClass: 'js-dgwt-wcas-analytics-lang',
         dateFilterSel: '.dgwt-wcas-analytics-date-filter',
+        dateFormClass: 'js-dgwt-wcas-analytics-date-form',
         dateFromClass: 'js-dgwt-wcas-analytics-date-from',
         dateToClass: 'js-dgwt-wcas-analytics-date-to',
         applyDateClass: 'js-dgwt-wcas-analytics-apply-date',
@@ -698,10 +699,10 @@
         checkIndexerAction: 'js-dgwt-wcas-analytics-check-indexer',
         resetAnalyticsAction: 'js-dgwt-wcas-analytics-reset',
         analyticsExportCSVAction: 'js-dgwt-wcas-analytics-export-csv',
-        currentPeriod: 'custom',
         currentDateFrom: '',
         currentDateTo: '',
         dateFilterBound: false,
+        isLoading: false,
         init: function () {
             var _this = this;
 
@@ -710,6 +711,7 @@
                 return;
             }
 
+            window.DGWT_WCAS_ANALYTICS = _this;
             _this.syncDateRangeFromDom();
             _this.bindDateFilterListeners();
             _this.interfaceLoaderListener();
@@ -746,6 +748,27 @@
                 $placeholder.html(html);
             }
         },
+        setFilterLoading: function (loading) {
+            var _this = this,
+                $button = $('.' + _this.applyDateClass),
+                label = (dgwt_wcas.analytics.labels && dgwt_wcas.analytics.labels.filter) || 'Filter',
+                loadingLabel = (dgwt_wcas.analytics.labels && dgwt_wcas.analytics.labels.filtering) || 'Filtering...';
+
+            _this.isLoading = !!loading;
+
+            if (!$button.length) {
+                return;
+            }
+
+            if (loading) {
+                if (!$button.data('original-label')) {
+                    $button.data('original-label', $.trim($button.text()) || label);
+                }
+                $button.prop('disabled', true).text(loadingLabel);
+            } else {
+                $button.prop('disabled', false).text($button.data('original-label') || label);
+            }
+        },
         formatDate: function (dateObj) {
             var year = dateObj.getFullYear(),
                 month = ('0' + (dateObj.getMonth() + 1)).slice(-2),
@@ -753,12 +776,32 @@
 
             return year + '-' + month + '-' + day;
         },
+        normalizeDate: function (value) {
+            if (!value) {
+                return '';
+            }
+
+            value = String(value).trim();
+
+            var isoMatch = value.match(/^(\d{4})[\/.\-](\d{1,2})[\/.\-](\d{1,2})$/);
+            if (isoMatch) {
+                return isoMatch[1] + '-' + ('0' + isoMatch[2]).slice(-2) + '-' + ('0' + isoMatch[3]).slice(-2);
+            }
+
+            var parsed = Date.parse(value);
+            if (!isNaN(parsed)) {
+                return this.formatDate(new Date(parsed));
+            }
+
+            return '';
+        },
         parseDate: function (value) {
-            if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+            var normalized = this.normalizeDate(value);
+            if (!normalized) {
                 return null;
             }
 
-            var parts = value.split('-'),
+            var parts = normalized.split('-'),
                 dateObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
 
             if (isNaN(dateObj.getTime())) {
@@ -782,19 +825,32 @@
             var _this = this,
                 $filter = $(_this.dateFilterSel),
                 $from = $('.' + _this.dateFromClass),
-                $to = $('.' + _this.dateToClass);
+                $to = $('.' + _this.dateToClass),
+                fromVal = '',
+                toVal = '';
 
-            if ($from.length && $to.length && $from.val() && $to.val()) {
-                _this.currentDateFrom = $from.val();
-                _this.currentDateTo = $to.val();
-                _this.currentPeriod = 'custom';
-                return;
+            if ($from.length) {
+                fromVal = _this.normalizeDate($from.val() || $from.attr('value') || '');
+            }
+            if ($to.length) {
+                toVal = _this.normalizeDate($to.val() || $to.attr('value') || '');
             }
 
-            if ($filter.length > 0) {
-                _this.currentDateFrom = $filter.data('date-from') || '';
-                _this.currentDateTo = $filter.data('date-to') || '';
-                _this.currentPeriod = 'custom';
+            if (!fromVal && $filter.length) {
+                fromVal = _this.normalizeDate($filter.attr('data-date-from') || '');
+            }
+            if (!toVal && $filter.length) {
+                toVal = _this.normalizeDate($filter.attr('data-date-to') || '');
+            }
+
+            _this.currentDateFrom = fromVal;
+            _this.currentDateTo = toVal;
+
+            if (fromVal && $from.length) {
+                $from.val(fromVal);
+            }
+            if (toVal && $to.length) {
+                $to.val(toVal);
             }
         },
         setPresetDates: function (preset) {
@@ -804,8 +860,8 @@
                 $to = $('.' + _this.dateToClass),
                 today = new Date(),
                 fromDate = new Date(),
-                minDate = _this.parseDate($filter.data('min-date')),
-                maxDate = _this.parseDate($filter.data('max-date')) || today;
+                minDate = _this.parseDate($filter.attr('data-min-date')),
+                maxDate = _this.parseDate($filter.attr('data-max-date')) || today;
 
             today.setHours(0, 0, 0, 0);
 
@@ -833,7 +889,6 @@
             $to.val(toValue);
             _this.currentDateFrom = fromValue;
             _this.currentDateTo = toValue;
-            _this.currentPeriod = 'custom';
         },
         bindDateFilterListeners: function () {
             var _this = this;
@@ -844,31 +899,39 @@
 
             _this.dateFilterBound = true;
 
+            $(document).on('submit', '.' + _this.dateFormClass, function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                _this.applyDateFilter();
+                return false;
+            });
+
             $(document).on('click', '.' + _this.applyDateClass, function (e) {
                 e.preventDefault();
+                e.stopPropagation();
                 _this.applyDateFilter();
+                return false;
             });
 
             $(document).on('click', '.' + _this.presetClass, function (e) {
                 e.preventDefault();
+                e.stopPropagation();
                 var preset = $(this).data('preset') || '30';
                 _this.setPresetDates(String(preset));
                 _this.applyDateFilter();
-            });
-
-            $(document).on('keydown', '.' + _this.dateFromClass + ', .' + _this.dateToClass, function (e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    _this.applyDateFilter();
-                }
+                return false;
             });
         },
         applyDateFilter: function () {
             var _this = this,
                 $from = $('.' + _this.dateFromClass),
                 $to = $('.' + _this.dateToClass),
-                dateFrom = $from.val(),
-                dateTo = $to.val();
+                dateFrom = _this.normalizeDate($from.val()),
+                dateTo = _this.normalizeDate($to.val());
+
+            if (_this.isLoading) {
+                return;
+            }
 
             if (!dateFrom || !dateTo) {
                 window.alert((dgwt_wcas.analytics.labels && dgwt_wcas.analytics.labels.date_range_required) || 'Please select both start and end dates.');
@@ -879,11 +942,10 @@
                 var tmp = dateFrom;
                 dateFrom = dateTo;
                 dateTo = tmp;
-                $from.val(dateFrom);
-                $to.val(dateTo);
             }
 
-            _this.currentPeriod = 'custom';
+            $from.val(dateFrom);
+            $to.val(dateTo);
             _this.currentDateFrom = dateFrom;
             _this.currentDateTo = dateTo;
             _this.reloadInterface();
@@ -894,22 +956,24 @@
 
             if ($canvas.length > 0) {
                 $canvas.removeClass(_this.placeholderClassLoaded);
-                $canvas.html('');
                 _this.loadInterface();
             }
         },
         loadInterface: function () {
             var _this = this,
-                $lang = $('.' + _this.languageSwitcherClass + ' option:selected');
+                $lang = $('.' + _this.languageSwitcherClass + ' option:selected'),
+                dateRange = _this.getDateRangeParams();
 
+            _this.setFilterLoading(true);
             _this.showPreloader();
 
             var data = {
                 'action': 'dgwt_wcas_load_stats_interface',
-                '_wpnonce': dgwt_wcas.analytics.nonce.analytics_load_interface
+                '_wpnonce': dgwt_wcas.analytics.nonce.analytics_load_interface,
+                'period': 'custom',
+                'date_from': dateRange.date_from,
+                'date_to': dateRange.date_to
             };
-
-            $.extend(data, _this.getDateRangeParams());
 
             if ($lang.length > 0) {
                 data.lang = $lang.val();
@@ -917,20 +981,34 @@
 
             $.post(
                 ajaxurl,
-                data,
-                function (response) {
-                    var $el = $('.' + _this.placeholderClass);
-                    if (typeof response == 'object' && response.success && $el.length > 0) {
-                        $el.addClass(_this.placeholderClassLoaded);
-                        $el.html(response.data.html);
-                        _this.syncDateRangeFromDom();
-                        _this.loadCheckCriticalSearchesListeners();
-                        _this.loadMoreListeners();
-                        _this.resetStatsListener();
-                        _this.exportStatsListener();
+                data
+            ).done(function (response) {
+                var $el = $('.' + _this.placeholderClass);
+                if (typeof response == 'object' && response.success && $el.length > 0) {
+                    $el.addClass(_this.placeholderClassLoaded);
+                    $el.html(response.data.html);
+
+                    if (response.data.date_from && response.data.date_to) {
+                        $('.' + _this.dateFromClass).val(response.data.date_from);
+                        $('.' + _this.dateToClass).val(response.data.date_to);
+                        $(_this.dateFilterSel).attr('data-date-from', response.data.date_from);
+                        $(_this.dateFilterSel).attr('data-date-to', response.data.date_to);
+                        _this.currentDateFrom = response.data.date_from;
+                        _this.currentDateTo = response.data.date_to;
                     }
+
+                    _this.loadCheckCriticalSearchesListeners();
+                    _this.loadMoreListeners();
+                    _this.resetStatsListener();
+                    _this.exportStatsListener();
+                } else {
+                    window.alert((dgwt_wcas.analytics.labels && dgwt_wcas.analytics.labels.filter_failed) || 'Could not refresh analytics for the selected dates.');
                 }
-            );
+            }).fail(function () {
+                window.alert((dgwt_wcas.analytics.labels && dgwt_wcas.analytics.labels.filter_failed) || 'Could not refresh analytics for the selected dates.');
+            }).always(function () {
+                _this.setFilterLoading(false);
+            });
         },
         loadCheckCriticalSearchesListeners: function () {
             var _this = this,
@@ -952,7 +1030,7 @@
             var _this = this;
 
             // Critical searches - load more
-            $('.' + _this.criticalSearchesLoadMoreClass).on('click', function (e) {
+            $('.' + _this.criticalSearchesLoadMoreClass).off('click.dgwtAnalyticsMore').on('click.dgwtAnalyticsMore', function (e) {
                 e.preventDefault();
                 $(this).before('<img src="' + dgwt_wcas.images.admin_preloader_url + '" />');
                 $(this).closest('tr').addClass(_this.rowLoadingClass);
@@ -960,13 +1038,13 @@
             })
 
             // Autocomplete with results - load more
-            $('.' + _this.autocompleteWithResultsLoadMoreClass).on('click', function (e) {
+            $('.' + _this.autocompleteWithResultsLoadMoreClass).off('click.dgwtAnalyticsMore').on('click.dgwtAnalyticsMore', function (e) {
                 e.preventDefault();
                 _this.loadMorePhrases('autocomplete', $(e.target));
             })
 
             // Search page with results - load more
-            $('.' + _this.searchPageWithResultsLoadMoreClass).on('click', function (e) {
+            $('.' + _this.searchPageWithResultsLoadMoreClass).off('click.dgwtAnalyticsMore').on('click.dgwtAnalyticsMore', function (e) {
                 e.preventDefault();
                 _this.loadMorePhrases('search-page', $(e.target));
             })

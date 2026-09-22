@@ -419,11 +419,16 @@ if ( ! class_exists( 'DGWT_WC_Ajax_Search' ) && ! function_exists( 'dgoraAsfwFs'
 			$min = SCRIPT_DEBUG ? '' : '.min';
 
 			// Register CSS
+			$adminStylePath = DGWT_WCAS_DIR . 'assets/css/admin-style' . $min . '.css';
+			$adminJsPath    = DGWT_WCAS_DIR . 'assets/js/admin' . $min . '.js';
+			$adminStyleVer  = DGWT_WCAS_VERSION . '.' . ( file_exists( $adminStylePath ) ? filemtime( $adminStylePath ) : time() );
+			$adminJsVer     = DGWT_WCAS_VERSION . '.' . ( file_exists( $adminJsPath ) ? filemtime( $adminJsPath ) : time() );
+
 			wp_register_style(
 				'dgwt-wcas-admin-style',
 				DGWT_WCAS_URL . 'assets/css/admin-style' . $min . '.css',
 				[],
-				DGWT_WCAS_VERSION
+				$adminStyleVer
 			);
 			// Register front styles for block editor
 			wp_register_style( 'dgwt-wcas-style', apply_filters( 'dgwt/wcas/scripts/css_style_url', DGWT_WCAS_URL . 'assets/css/style' . $min . '.css' ), [], DGWT_WCAS_VERSION );
@@ -437,7 +442,7 @@ if ( ! class_exists( 'DGWT_WC_Ajax_Search' ) && ! function_exists( 'dgoraAsfwFs'
 					'jquery',
 					'wp-url',
 				],
-				DGWT_WCAS_VERSION
+				$adminJsVer
 			);
 
 			if ( \DgoraWcas\Helpers::isSettingsPage() ) {
