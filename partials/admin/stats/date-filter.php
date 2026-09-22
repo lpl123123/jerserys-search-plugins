@@ -3,45 +3,51 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+$dateFrom = isset( $vars['date-from'] ) ? $vars['date-from'] : date( 'Y-m-d', strtotime( 'today - 30 days' ) );
+$dateTo   = isset( $vars['date-to'] ) ? $vars['date-to'] : date( 'Y-m-d' );
+$minDate  = isset( $vars['min-date'] ) ? $vars['min-date'] : date( 'Y-m-d', strtotime( 'today - 30 days' ) );
+$maxDate  = isset( $vars['max-date'] ) ? $vars['max-date'] : date( 'Y-m-d' );
+$period   = isset( $vars['period'] ) ? $vars['period'] : '30';
 ?>
 <div class="dgwt-wcas-analytics-date-filter"
-	 data-period="<?php echo esc_attr( $vars['period'] ); ?>"
-	 data-date-from="<?php echo esc_attr( $vars['date-from'] ); ?>"
-	 data-date-to="<?php echo esc_attr( $vars['date-to'] ); ?>">
+	 data-period="<?php echo esc_attr( $period ); ?>"
+	 data-date-from="<?php echo esc_attr( $dateFrom ); ?>"
+	 data-date-to="<?php echo esc_attr( $dateTo ); ?>"
+	 data-min-date="<?php echo esc_attr( $minDate ); ?>"
+	 data-max-date="<?php echo esc_attr( $maxDate ); ?>">
 	<h3><?php _e( 'Date range', 'ajax-search-for-woocommerce' ); ?></h3>
-	<p class="dgwt-wcas-analytics-subtitle"><?php _e( 'Filter search analytics by a selected time period.', 'ajax-search-for-woocommerce' ); ?></p>
+	<p class="dgwt-wcas-analytics-subtitle"><?php _e( 'Choose a start and end date, then click Filter to update the analytics below.', 'ajax-search-for-woocommerce' ); ?></p>
 
 	<div class="dgwt-wcas-analytics-date-filter__controls">
-		<label class="screen-reader-text" for="dgwt-wcas-analytics-period"><?php _e( 'Period', 'ajax-search-for-woocommerce' ); ?></label>
-		<select id="dgwt-wcas-analytics-period" class="js-dgwt-wcas-analytics-period">
-			<option value="today" <?php selected( $vars['period'], 'today' ); ?>><?php _e( 'Today', 'ajax-search-for-woocommerce' ); ?></option>
-			<?php if ( $vars['expiration-days'] >= 7 ) : ?>
-				<option value="7" <?php selected( $vars['period'], '7' ); ?>><?php _e( 'Last 7 days', 'ajax-search-for-woocommerce' ); ?></option>
-			<?php endif; ?>
-			<?php if ( $vars['expiration-days'] >= 30 ) : ?>
-				<option value="30" <?php selected( $vars['period'], '30' ); ?>><?php _e( 'Last 30 days', 'ajax-search-for-woocommerce' ); ?></option>
-			<?php endif; ?>
-			<option value="custom" <?php selected( $vars['period'], 'custom' ); ?>><?php _e( 'Custom range', 'ajax-search-for-woocommerce' ); ?></option>
-		</select>
-
-		<span class="dgwt-wcas-analytics-date-filter__custom js-dgwt-wcas-analytics-custom-range" <?php echo $vars['period'] === 'custom' ? '' : 'style="display:none;"'; ?>>
+		<div class="dgwt-wcas-analytics-date-filter__field">
 			<label for="dgwt-wcas-analytics-date-from"><?php _e( 'From', 'ajax-search-for-woocommerce' ); ?></label>
 			<input type="date"
 				   id="dgwt-wcas-analytics-date-from"
 				   class="js-dgwt-wcas-analytics-date-from"
-				   value="<?php echo esc_attr( $vars['date-from'] ); ?>"
-				   min="<?php echo esc_attr( $vars['min-date'] ); ?>"
-				   max="<?php echo esc_attr( $vars['max-date'] ); ?>" />
+				   value="<?php echo esc_attr( $dateFrom ); ?>"
+				   min="<?php echo esc_attr( $minDate ); ?>"
+				   max="<?php echo esc_attr( $maxDate ); ?>" />
+		</div>
 
+		<div class="dgwt-wcas-analytics-date-filter__field">
 			<label for="dgwt-wcas-analytics-date-to"><?php _e( 'To', 'ajax-search-for-woocommerce' ); ?></label>
 			<input type="date"
 				   id="dgwt-wcas-analytics-date-to"
 				   class="js-dgwt-wcas-analytics-date-to"
-				   value="<?php echo esc_attr( $vars['date-to'] ); ?>"
-				   min="<?php echo esc_attr( $vars['min-date'] ); ?>"
-				   max="<?php echo esc_attr( $vars['max-date'] ); ?>" />
+				   value="<?php echo esc_attr( $dateTo ); ?>"
+				   min="<?php echo esc_attr( $minDate ); ?>"
+				   max="<?php echo esc_attr( $maxDate ); ?>" />
+		</div>
 
-			<button type="button" class="button js-dgwt-wcas-analytics-apply-date"><?php _e( 'Apply', 'ajax-search-for-woocommerce' ); ?></button>
-		</span>
+		<button type="button" class="button button-primary js-dgwt-wcas-analytics-apply-date">
+			<?php _e( 'Filter', 'ajax-search-for-woocommerce' ); ?>
+		</button>
+	</div>
+
+	<div class="dgwt-wcas-analytics-date-filter__presets">
+		<button type="button" class="button-link js-dgwt-wcas-analytics-preset" data-preset="today"><?php _e( 'Today', 'ajax-search-for-woocommerce' ); ?></button>
+		<button type="button" class="button-link js-dgwt-wcas-analytics-preset" data-preset="7"><?php _e( 'Last 7 days', 'ajax-search-for-woocommerce' ); ?></button>
+		<button type="button" class="button-link js-dgwt-wcas-analytics-preset" data-preset="30"><?php _e( 'Last 30 days', 'ajax-search-for-woocommerce' ); ?></button>
 	</div>
 </div>

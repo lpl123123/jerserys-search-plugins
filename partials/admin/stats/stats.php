@@ -3,8 +3,6 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
-
-require DGWT_WCAS_DIR . 'partials/admin/stats/date-filter.php';
 ?>
 <div class="dgwt-wcas-analytics-module-critical">
 	<h3><?php _e( 'Critical searches without result', 'ajax-search-for-woocommerce' ); ?></h3>

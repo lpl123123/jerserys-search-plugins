@@ -152,6 +152,7 @@ class UserInterface {
 			],
 			'labels'  => [
 				'reset_stats_confirm' => __( 'Are you sure you want to reset stats?', 'ajax-search-for-woocommerce' ),
+				'date_range_required' => __( 'Please select both start and end dates.', 'ajax-search-for-woocommerce' ),
 			],
 		];
 
@@ -167,6 +168,18 @@ class UserInterface {
 		if ( Multilingual::isMultilingual() ) {
 			echo $this->getLanguageSwitcher();
 		}
+
+		$dateRange = $this->resolveDateRange();
+		$vars      = [
+			'period'          => $dateRange['period'],
+			'date-from'       => substr( $dateRange['from'], 0, 10 ),
+			'date-to'         => substr( $dateRange['to'], 0, 10 ),
+			'min-date'        => date( 'Y-m-d', strtotime( 'today - ' . $this->getExpirationInDays() . ' days' ) ),
+			'max-date'        => date( 'Y-m-d' ),
+			'expiration-days' => $this->getExpirationInDays(),
+		];
+		require DGWT_WCAS_DIR . 'partials/admin/stats/date-filter.php';
+
 		echo '<div class="dgwt-wcas-analytics-body ' . self::CSS_CLASS_PLACEHOLDER . '"></div>';
 	}
 

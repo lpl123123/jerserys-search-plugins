@@ -689,18 +689,19 @@
         checkPhraseStatusInitClass: 'js-dgwt-wcas-stats-critical-check-init',
         rowLoadingClass: 'dgwt-wcas-analytics-row-loading',
         languageSwitcherClass: 'js-dgwt-wcas-analytics-lang',
-        periodSwitcherClass: 'js-dgwt-wcas-analytics-period',
-        customRangeClass: 'js-dgwt-wcas-analytics-custom-range',
+        dateFilterSel: '.dgwt-wcas-analytics-date-filter',
         dateFromClass: 'js-dgwt-wcas-analytics-date-from',
         dateToClass: 'js-dgwt-wcas-analytics-date-to',
         applyDateClass: 'js-dgwt-wcas-analytics-apply-date',
+        presetClass: 'js-dgwt-wcas-analytics-preset',
         excludePhraseClass: 'js-dgwt-wcas-analytics-exclude-phrase',
         checkIndexerAction: 'js-dgwt-wcas-analytics-check-indexer',
         resetAnalyticsAction: 'js-dgwt-wcas-analytics-reset',
         analyticsExportCSVAction: 'js-dgwt-wcas-analytics-export-csv',
-        currentPeriod: '30',
+        currentPeriod: 'custom',
         currentDateFrom: '',
         currentDateTo: '',
+        dateFilterBound: false,
         init: function () {
             var _this = this;
 
@@ -709,6 +710,8 @@
                 return;
             }
 
+            _this.syncDateRangeFromDom();
+            _this.bindDateFilterListeners();
             _this.interfaceLoaderListener();
         },
         interfaceLoaderListener: function () {
@@ -740,39 +743,150 @@
                 html = '<img class="' + _this.preloaderClass + '" src="' + dgwt_wcas.analytics.images.placeholder + '" />';
 
             if ($placeholder.length) {
-                $placeholder.append(html);
+                $placeholder.html(html);
             }
+        },
+        formatDate: function (dateObj) {
+            var year = dateObj.getFullYear(),
+                month = ('0' + (dateObj.getMonth() + 1)).slice(-2),
+                day = ('0' + dateObj.getDate()).slice(-2);
+
+            return year + '-' + month + '-' + day;
+        },
+        parseDate: function (value) {
+            if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                return null;
+            }
+
+            var parts = value.split('-'),
+                dateObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+
+            if (isNaN(dateObj.getTime())) {
+                return null;
+            }
+
+            return dateObj;
         },
         getDateRangeParams: function () {
             var _this = this;
 
+            _this.syncDateRangeFromDom();
+
             return {
-                period: _this.currentPeriod || '30',
+                period: 'custom',
                 date_from: _this.currentDateFrom || '',
                 date_to: _this.currentDateTo || ''
             };
         },
         syncDateRangeFromDom: function () {
             var _this = this,
-                $filter = $('.dgwt-wcas-analytics-date-filter'),
-                $period = $('.' + _this.periodSwitcherClass);
+                $filter = $(_this.dateFilterSel),
+                $from = $('.' + _this.dateFromClass),
+                $to = $('.' + _this.dateToClass);
 
-            if ($period.length > 0) {
-                _this.currentPeriod = $period.val();
-            } else if ($filter.length > 0) {
-                _this.currentPeriod = $filter.data('period') || '30';
+            if ($from.length && $to.length && $from.val() && $to.val()) {
+                _this.currentDateFrom = $from.val();
+                _this.currentDateTo = $to.val();
+                _this.currentPeriod = 'custom';
+                return;
             }
 
-            if (_this.currentPeriod === 'custom') {
-                var $from = $('.' + _this.dateFromClass),
-                    $to = $('.' + _this.dateToClass);
+            if ($filter.length > 0) {
+                _this.currentDateFrom = $filter.data('date-from') || '';
+                _this.currentDateTo = $filter.data('date-to') || '';
+                _this.currentPeriod = 'custom';
+            }
+        },
+        setPresetDates: function (preset) {
+            var _this = this,
+                $filter = $(_this.dateFilterSel),
+                $from = $('.' + _this.dateFromClass),
+                $to = $('.' + _this.dateToClass),
+                today = new Date(),
+                fromDate = new Date(),
+                minDate = _this.parseDate($filter.data('min-date')),
+                maxDate = _this.parseDate($filter.data('max-date')) || today;
 
-                _this.currentDateFrom = $from.length ? $from.val() : ($filter.data('date-from') || '');
-                _this.currentDateTo = $to.length ? $to.val() : ($filter.data('date-to') || '');
+            today.setHours(0, 0, 0, 0);
+
+            if (preset === 'today') {
+                fromDate = new Date(today.getTime());
+            } else if (preset === '7') {
+                fromDate = new Date(today.getTime());
+                fromDate.setDate(fromDate.getDate() - 7);
             } else {
-                _this.currentDateFrom = '';
-                _this.currentDateTo = '';
+                fromDate = new Date(today.getTime());
+                fromDate.setDate(fromDate.getDate() - 30);
             }
+
+            if (minDate && fromDate < minDate) {
+                fromDate = new Date(minDate.getTime());
+            }
+            if (maxDate && fromDate > maxDate) {
+                fromDate = new Date(maxDate.getTime());
+            }
+
+            var fromValue = _this.formatDate(fromDate),
+                toValue = _this.formatDate(maxDate < today ? maxDate : today);
+
+            $from.val(fromValue);
+            $to.val(toValue);
+            _this.currentDateFrom = fromValue;
+            _this.currentDateTo = toValue;
+            _this.currentPeriod = 'custom';
+        },
+        bindDateFilterListeners: function () {
+            var _this = this;
+
+            if (_this.dateFilterBound) {
+                return;
+            }
+
+            _this.dateFilterBound = true;
+
+            $(document).on('click', '.' + _this.applyDateClass, function (e) {
+                e.preventDefault();
+                _this.applyDateFilter();
+            });
+
+            $(document).on('click', '.' + _this.presetClass, function (e) {
+                e.preventDefault();
+                var preset = $(this).data('preset') || '30';
+                _this.setPresetDates(String(preset));
+                _this.applyDateFilter();
+            });
+
+            $(document).on('keydown', '.' + _this.dateFromClass + ', .' + _this.dateToClass, function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    _this.applyDateFilter();
+                }
+            });
+        },
+        applyDateFilter: function () {
+            var _this = this,
+                $from = $('.' + _this.dateFromClass),
+                $to = $('.' + _this.dateToClass),
+                dateFrom = $from.val(),
+                dateTo = $to.val();
+
+            if (!dateFrom || !dateTo) {
+                window.alert((dgwt_wcas.analytics.labels && dgwt_wcas.analytics.labels.date_range_required) || 'Please select both start and end dates.');
+                return;
+            }
+
+            if (dateFrom > dateTo) {
+                var tmp = dateFrom;
+                dateFrom = dateTo;
+                dateTo = tmp;
+                $from.val(dateFrom);
+                $to.val(dateTo);
+            }
+
+            _this.currentPeriod = 'custom';
+            _this.currentDateFrom = dateFrom;
+            _this.currentDateTo = dateTo;
+            _this.reloadInterface();
         },
         reloadInterface: function () {
             var _this = this,
@@ -810,7 +924,6 @@
                         $el.addClass(_this.placeholderClassLoaded);
                         $el.html(response.data.html);
                         _this.syncDateRangeFromDom();
-                        _this.dateFilterListener();
                         _this.loadCheckCriticalSearchesListeners();
                         _this.loadMoreListeners();
                         _this.resetStatsListener();
@@ -818,42 +931,6 @@
                     }
                 }
             );
-        },
-        dateFilterListener: function () {
-            var _this = this,
-                $period = $('.' + _this.periodSwitcherClass),
-                $customRange = $('.' + _this.customRangeClass),
-                $apply = $('.' + _this.applyDateClass);
-
-            $period.off('change.dgwtAnalyticsDate').on('change.dgwtAnalyticsDate', function () {
-                var period = $(this).val();
-
-                if (period === 'custom') {
-                    $customRange.show();
-                    return;
-                }
-
-                $customRange.hide();
-                _this.currentPeriod = period;
-                _this.currentDateFrom = '';
-                _this.currentDateTo = '';
-                _this.reloadInterface();
-            });
-
-            $apply.off('click.dgwtAnalyticsDate').on('click.dgwtAnalyticsDate', function (e) {
-                e.preventDefault();
-                var dateFrom = $('.' + _this.dateFromClass).val(),
-                    dateTo = $('.' + _this.dateToClass).val();
-
-                if (!dateFrom || !dateTo) {
-                    return;
-                }
-
-                _this.currentPeriod = 'custom';
-                _this.currentDateFrom = dateFrom;
-                _this.currentDateTo = dateTo;
-                _this.reloadInterface();
-            });
         },
         loadCheckCriticalSearchesListeners: function () {
             var _this = this,
@@ -899,7 +976,7 @@
         resetStatsListener: function () {
             var _this = this;
 
-            $('.' + _this.resetAnalyticsAction).on('click', function (e) {
+            $('.' + _this.resetAnalyticsAction).off('click.dgwtAnalyticsReset').on('click.dgwtAnalyticsReset', function (e) {
                 var $el = $(this);
                 e.preventDefault();
                 if (confirm(dgwt_wcas.analytics.labels.reset_stats_confirm)) {
@@ -913,7 +990,7 @@
                     $.post(
                         ajaxurl,
                         data,
-                        function (response) {
+                        function () {
                             location.reload();
                         }
                     );
@@ -925,14 +1002,13 @@
                 $lang = $('.' + _this.languageSwitcherClass + ' option:selected'),
                 dateRange = _this.getDateRangeParams();
 
-            $('.' + _this.analyticsExportCSVAction).on('click', function (e) {
-                var $el = $(this);
+            $('.' + _this.analyticsExportCSVAction).off('click.dgwtAnalyticsExport').on('click.dgwtAnalyticsExport', function (e) {
                 e.preventDefault();
                 var url = new URL(dgwt_wcas.adminurl);
                 url.searchParams.append('action', 'dgwt_wcas_export_stats_csv');
                 url.searchParams.append('context', $(this).data('context'));
                 url.searchParams.append('_wpnonce', dgwt_wcas.analytics.nonce.export_stats_csv);
-                url.searchParams.append('period', dateRange.period);
+                url.searchParams.append('period', 'custom');
                 if (dateRange.date_from) {
                     url.searchParams.append('date_from', dateRange.date_from);
                 }
@@ -1069,14 +1145,15 @@
             $el.before('<img src="' + dgwt_wcas.images.admin_preloader_url + '" />');
             $el.closest('tr').addClass(_this.rowLoadingClass);
 
+            var data;
             if (context === 'autocomplete') {
-                var data = {
+                data = {
                     'action': 'dgwt_wcas_laod_more_autocomplete',
                     'loaded': $('.js-dgwt-wcas-autocomplete-row').length,
                     '_wpnonce': dgwt_wcas.analytics.nonce.load_more_autocomplete
                 };
             } else {
-                var data = {
+                data = {
                     'action': 'dgwt_wcas_laod_more_search_page',
                     'loaded': $('.js-dgwt-wcas-search-page-row').length,
                     '_wpnonce': dgwt_wcas.analytics.nonce.load_more_search_page
