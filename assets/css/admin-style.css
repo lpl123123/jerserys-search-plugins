@@ -2233,6 +2233,10 @@ h3.dgwt-wcas-troubleshooting-issue-title {
 	gap: 12px;
 }
 
+.dgwt-wcas-analytics-date-filter__form {
+	margin: 0;
+}
+
 .dgwt-wcas-analytics-date-filter__field {
 	display: flex;
 	flex-direction: column;

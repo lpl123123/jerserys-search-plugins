@@ -153,6 +153,9 @@ class UserInterface {
 			'labels'  => [
 				'reset_stats_confirm' => __( 'Are you sure you want to reset stats?', 'ajax-search-for-woocommerce' ),
 				'date_range_required' => __( 'Please select both start and end dates.', 'ajax-search-for-woocommerce' ),
+				'filter'              => __( 'Filter', 'ajax-search-for-woocommerce' ),
+				'filtering'           => __( 'Filtering...', 'ajax-search-for-woocommerce' ),
+				'filter_failed'       => __( 'Could not refresh analytics for the selected dates.', 'ajax-search-for-woocommerce' ),
 			],
 		];
 
@@ -223,7 +226,12 @@ class UserInterface {
 		$dateRange = $this->getDateRangeFromRequest();
 
 		$data = [
-			'html' => '',
+			'html'      => '',
+			'date_from' => substr( $dateRange['from'], 0, 10 ),
+			'date_to'   => substr( $dateRange['to'], 0, 10 ),
+			'days'      => $dateRange['days'],
+			'period'    => $dateRange['period'],
+			'label'     => $this->getPeriodLabel( $dateRange ),
 		];
 
 		ob_start();
@@ -789,29 +797,23 @@ class UserInterface {
 	 * @return string
 	 */
 	private function getPeriodLabel( $dateRange ) {
-		switch ( $dateRange['period'] ) {
-			case 'today':
-				return __( 'today', 'ajax-search-for-woocommerce' );
-			case '7':
-				return sprintf( __( 'last %d days', 'ajax-search-for-woocommerce' ), 7 );
-			case 'custom':
-				$from = date_i18n( get_option( 'date_format' ), strtotime( $dateRange['from'] ) );
-				$to   = date_i18n( get_option( 'date_format' ), strtotime( $dateRange['to'] ) );
+		$from = date_i18n( get_option( 'date_format' ), strtotime( $dateRange['from'] ) );
+		$to   = date_i18n( get_option( 'date_format' ), strtotime( $dateRange['to'] ) );
 
-				return sprintf(
-					/* translators: 1: start date, 2: end date */
-					__( '%1$s – %2$s', 'ajax-search-for-woocommerce' ),
-					$from,
-					$to
-				);
-			case '30':
-			default:
-				return sprintf( __( 'last %d days', 'ajax-search-for-woocommerce' ), (int) $dateRange['days'] );
+		if ( substr( $dateRange['from'], 0, 10 ) === substr( $dateRange['to'], 0, 10 ) ) {
+			return $from;
 		}
+
+		return sprintf(
+			/* translators: 1: start date, 2: end date */
+			__( '%1$s – %2$s', 'ajax-search-for-woocommerce' ),
+			$from,
+			$to
+		);
 	}
 
 	/**
-	 * Validate Y-m-d date string
+	 * Validate a date-only string and normalize to Y-m-d
 	 *
 	 * @param string $date
 	 *
@@ -820,16 +822,27 @@ class UserInterface {
 	private function sanitizeDateOnly( $date ) {
 		$date = trim( (string) $date );
 
-		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ) {
+		if ( $date === '' ) {
 			return '';
 		}
 
-		$dt = \DateTime::createFromFormat( 'Y-m-d', $date );
-		if ( ! $dt || $dt->format( 'Y-m-d' ) !== $date ) {
-			return '';
+		// Accept Y-m-d and Y/m/d (some browsers/locales expose slashes).
+		if ( preg_match( '/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})$/', $date, $matches ) ) {
+			$year  = (int) $matches[1];
+			$month = (int) $matches[2];
+			$day   = (int) $matches[3];
+
+			if ( checkdate( $month, $day, $year ) ) {
+				return sprintf( '%04d-%02d-%02d', $year, $month, $day );
+			}
 		}
 
-		return $date;
+		$timestamp = strtotime( $date );
+		if ( $timestamp ) {
+			return date( 'Y-m-d', $timestamp );
+		}
+
+		return '';
 	}
 
 	/**

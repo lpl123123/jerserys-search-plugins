@@ -13,16 +13,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 			//phpcs:ignore WordPress.WP.I18n.MissingSingularPlaceholder,WordPress.WP.I18n.MismatchedPlaceholders
 			printf( _n( 'The FiboSearch analyzer found <b>1 critical search phrase</b>.', 'The FiboSearch analyzer found <b>%d critical search phrases</b>.', $vars['critical-searches-total'], 'ajax-search-for-woocommerce' ), $vars['critical-searches-total'] );
 			echo ' ';
-			if ( $vars['period'] === 'custom' ) {
-				printf(
-					/* translators: %s: selected date range label */
-					__( 'These phrases have been typed by users during %s.', 'ajax-search-for-woocommerce' ),
-					esc_html( $vars['period-label'] )
-				);
-			} else {
-				//phpcs:ignore WordPress.WP.I18n.MissingSingularPlaceholder,WordPress.WP.I18n.MismatchedPlaceholders
-				printf( _n( 'These phrases have been typed by users over the last 1 day.', 'These phrases have been typed by users over the last %d days.', $vars['days'], 'ajax-search-for-woocommerce' ), $vars['days'] );
-			}
+			printf(
+				/* translators: %s: selected date range label */
+				__( 'These phrases have been typed by users during %s.', 'ajax-search-for-woocommerce' ),
+				esc_html( $vars['period-label'] )
+			);
 			echo ' ';
 			_e( "These phrases don`t return any search results. It's time to fix it.", 'ajax-search-for-woocommerce' );
 			?>
@@ -96,15 +91,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<?php else : ?>
 		<p class="dgwt-wcas-analytics-subtitle">
 			<?php
-			if ( $vars['period'] === 'custom' ) {
-				printf(
-					/* translators: %s: selected date range label */
-					__( "Fantastic! The FiboSearch analyzer hasn't found any critical search phrases for %s.", 'ajax-search-for-woocommerce' ),
-					esc_html( $vars['period-label'] )
-				);
-			} else {
-				printf( __( "Fantastic! The FiboSearch analyzer hasn't found any critical search phrases for the last %d days.", 'ajax-search-for-woocommerce' ), $vars['days'] );
-			}
+			printf(
+				/* translators: %s: selected date range label */
+				__( "Fantastic! The FiboSearch analyzer hasn't found any critical search phrases for %s.", 'ajax-search-for-woocommerce' ),
+				esc_html( $vars['period-label'] )
+			);
 			?>
 		</p>
 	<?php endif; ?>
@@ -116,15 +107,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<div class="dgwt-wcas-analytics-module-tiles">
 		<h3>
 			<?php
-			if ( $vars['period'] === 'custom' ) {
-				printf(
-					/* translators: %s: selected date range label */
-					__( 'Searches stats (%s)', 'ajax-search-for-woocommerce' ),
-					esc_html( $vars['period-label'] )
-				);
-			} else {
-				printf( __( 'Searches stats (last %d days)', 'ajax-search-for-woocommerce' ), $vars['days'] );
-			}
+			printf(
+				/* translators: %s: selected date range label */
+				__( 'Searches stats (%s)', 'ajax-search-for-woocommerce' ),
+				esc_html( $vars['period-label'] )
+			);
 			?>
 		</h3>
 
