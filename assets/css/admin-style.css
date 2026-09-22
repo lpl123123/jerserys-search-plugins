@@ -2217,39 +2217,55 @@ h3.dgwt-wcas-troubleshooting-issue-title {
 }
 
 .dgwt-wcas-analytics-body,
-.dgwt-wcas-analytics-langs {
+.dgwt-wcas-analytics-langs,
+.dgwt-wcas-analytics-date-filter {
 	padding-left: 10px;
 }
 
 .dgwt-wcas-analytics-date-filter {
-	padding-left: 10px;
 	margin-bottom: 25px;
 }
 
 .dgwt-wcas-analytics-date-filter__controls {
 	display: flex;
 	flex-wrap: wrap;
-	align-items: center;
-	gap: 10px;
+	align-items: flex-end;
+	gap: 12px;
 }
 
-.dgwt-wcas-analytics-date-filter__controls select {
-	min-width: 160px;
+.dgwt-wcas-analytics-date-filter__field {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
 }
 
-.dgwt-wcas-analytics-date-filter__custom {
-	display: inline-flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: 8px;
-}
-
-.dgwt-wcas-analytics-date-filter__custom label {
+.dgwt-wcas-analytics-date-filter__field label {
 	font-weight: 600;
+	font-size: 13px;
 }
 
-.dgwt-wcas-analytics-date-filter__custom input[type="date"] {
-	max-width: 150px;
+.dgwt-wcas-analytics-date-filter__field input[type="date"] {
+	min-width: 160px;
+	max-width: 180px;
+	height: 30px;
+}
+
+.dgwt-wcas-analytics-date-filter__controls .button-primary {
+	height: 30px;
+	line-height: 28px;
+	min-width: 72px;
+}
+
+.dgwt-wcas-analytics-date-filter__presets {
+	margin-top: 10px;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 14px;
+}
+
+.dgwt-wcas-analytics-date-filter__presets .button-link {
+	padding: 0;
+	text-decoration: none;
 }
 
 .dgwt-wcas-analytics-tiles {
@@ -2740,12 +2756,13 @@ input.dgwt-wcas-selectize.loading {
 	}
 
 	.dgwt-wcas-analytics-date-filter__controls,
-	.dgwt-wcas-analytics-date-filter__custom {
+	.dgwt-wcas-analytics-date-filter__field,
+	.dgwt-wcas-analytics-date-filter__presets {
 		width: 100%;
 	}
 
-	.dgwt-wcas-analytics-date-filter__controls select,
-	.dgwt-wcas-analytics-date-filter__custom input[type="date"] {
+	.dgwt-wcas-analytics-date-filter__field input[type="date"],
+	.dgwt-wcas-analytics-date-filter__controls .button-primary {
 		width: 100%;
 		max-width: 100%;
 	}
